@@ -1,4 +1,4 @@
---
+-- Chnaged the Date format from TimeStamp to Date
 select [order_delivered_customer_date], Convert( date, [order_delivered_customer_date]) as NewDeliveredDate
 from [ecommerce].[dbo].[olist_orders_dataset$]
 
@@ -7,7 +7,8 @@ Alter table [ecommerce].[dbo].[olist_orders_dataset$] add NewDeliveredDate Date
 update  [ecommerce].[dbo].[olist_orders_dataset$] 
 set NewDeliveredDate=  Convert( date, [order_delivered_customer_date]);
 
---
+-- Get the Category that brought in the most Sales in 2018
+
 select [ecommerce].[dbo].[olist_products_dataset$].product_category_name,
 sum([payment_value]) as SumByCategoryInAYear
 from [ecommerce].[dbo].[olist_order_items_dataset$]
@@ -22,7 +23,8 @@ where
 group by  [ecommerce].[dbo].[olist_products_dataset$].product_category_name
 order by SumByCategoryInAYear desc
 
--- 
+-- Get the Month that brough in the most sales
+
 select datename(mm, [ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate) as SalesMonth, 
 sum([ecommerce].[dbo].[olist_order_payments_dataset$].payment_value) as Total, 
 count([ecommerce].[dbo].[olist_order_payments_dataset$].order_id) as No_of_Orders
@@ -33,7 +35,8 @@ where NewDeliveredDate between '2018-01-01' and '2018-12-31'
 group by  datename(mm, [ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate)
 order by 2 desc
 
---
+-- Find the top perfoming product in the Top Performing month
+
 SELECT top (10) product_id,
   month( [ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate) as Month, 
   count([ecommerce].[dbo].[olist_orders_dataset$].order_id) as No_of_Orders, sum([ecommerce].[dbo].[olist_order_items_dataset$].price) as Total_sales
@@ -44,7 +47,8 @@ SELECT top (10) product_id,
   group by product_id, month([olist_orders_dataset$].NewDeliveredDate)
   order by No_of_Orders desc
   
-  -- 
+  -- Find the top performing products in the Second Top performing month
+  
   SELECT top (10) product_id,
   month( [ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate) as Month, 
   count([ecommerce].[dbo].[olist_orders_dataset$].order_id) as No_of_Orders,
@@ -56,7 +60,8 @@ SELECT top (10) product_id,
   group by product_id, month([olist_orders_dataset$].NewDeliveredDate)
   order by No_of_Orders desc
   
-  --
+  -- RFM ANALYSIS
+  
   drop table if exists #rfm2 
 ; with rfm2 (Customer_id, MonetaryValue, AvgMonetaryValue, Frequency, LastOrderDate,MaxOrderDate, Recency) 
  as
@@ -88,7 +93,8 @@ from rfm_calc2
   
   select * from #rfm2018
   
-  -- Customer Segmentation
+  -- PUTTING THE CUSTOMERS IN SEGMENTS
+  
    select Customer_id, rfm_Recency2,rfm_Frequency2,rfm_Monetary2, 
   case when rfm_cell_string in (111, 112, 121, 122, 123, 132, 211, 212, 114, 141) then 'lost_customers'
   when rfm_cell_string in (133, 134, 143, 244, 334, 343, 344, 144) then 'Almost_goneCustomers' -- customers that don't order much but buy large amount of products

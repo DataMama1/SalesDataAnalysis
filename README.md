@@ -1,1 +1,102 @@
-select * from me
+--
+select [order_delivered_customer_date], Convert( date, [order_delivered_customer_date]) as NewDeliveredDate
+from [ecommerce].[dbo].[olist_orders_dataset$]
+
+Alter table [ecommerce].[dbo].[olist_orders_dataset$] add NewDeliveredDate Date
+
+update  [ecommerce].[dbo].[olist_orders_dataset$] 
+set NewDeliveredDate=  Convert( date, [order_delivered_customer_date]);
+
+--
+select [ecommerce].[dbo].[olist_products_dataset$].product_category_name,
+sum([payment_value]) as SumByCategoryInAYear
+from [ecommerce].[dbo].[olist_order_items_dataset$]
+join [ecommerce].[dbo].[olist_products_dataset$] on
+[ecommerce].[dbo].[olist_products_dataset$].product_id = [ecommerce].[dbo].[olist_order_items_dataset$].product_id 
+join [ecommerce].[dbo].[olist_order_payments_dataset$] 
+on [ecommerce].[dbo].[olist_order_payments_dataset$]. order_id = [ecommerce].[dbo].[olist_order_items_dataset$].order_id
+join [ecommerce].[dbo].[olist_orders_dataset$] 
+on [ecommerce].[dbo].[olist_orders_dataset$].order_id= [ecommerce].[dbo].[olist_order_items_dataset$].order_id
+where 
+[ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate between '2018-01-01' and '2018-12-31'
+group by  [ecommerce].[dbo].[olist_products_dataset$].product_category_name
+order by SumByCategoryInAYear desc
+
+-- 
+select datename(mm, [ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate) as SalesMonth, 
+sum([ecommerce].[dbo].[olist_order_payments_dataset$].payment_value) as Total, 
+count([ecommerce].[dbo].[olist_order_payments_dataset$].order_id) as No_of_Orders
+from [ecommerce].[dbo].[olist_orders_dataset$]
+join [ecommerce].[dbo].[olist_order_payments_dataset$] 
+on [ecommerce].[dbo].[olist_order_payments_dataset$].order_id = [ecommerce].[dbo].[olist_orders_dataset$].order_id
+where NewDeliveredDate between '2018-01-01' and '2018-12-31'
+group by  datename(mm, [ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate)
+order by 2 desc
+
+--
+SELECT top (10) product_id,
+  month( [ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate) as Month, 
+  count([ecommerce].[dbo].[olist_orders_dataset$].order_id) as No_of_Orders, sum([ecommerce].[dbo].[olist_order_items_dataset$].price) as Total_sales
+  FROM [ecommerce].[dbo].[olist_order_items_dataset$]
+  join [ecommerce].[dbo].[olist_orders_dataset$] 
+  on [ecommerce].[dbo].[olist_orders_dataset$].order_id = [ecommerce].[dbo].[olist_order_items_dataset$].order_id
+  where year([ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate)= 2018 and month([olist_orders_dataset$].NewDeliveredDate)= 8
+  group by product_id, month([olist_orders_dataset$].NewDeliveredDate)
+  order by No_of_Orders desc
+  
+  -- 
+  SELECT top (10) product_id,
+  month( [ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate) as Month, 
+  count([ecommerce].[dbo].[olist_orders_dataset$].order_id) as No_of_Orders,
+  sum([ecommerce].[dbo].[olist_order_items_dataset$].price) as Total_sales
+  FROM [ecommerce].[dbo].[olist_order_items_dataset$]
+  join [ecommerce].[dbo].[olist_orders_dataset$] 
+  on [ecommerce].[dbo].[olist_orders_dataset$].order_id = [ecommerce].[dbo].[olist_order_items_dataset$].order_id
+  where year([ecommerce].[dbo].[olist_orders_dataset$].NewDeliveredDate)= 2018 and month([olist_orders_dataset$].NewDeliveredDate)= 4
+  group by product_id, month([olist_orders_dataset$].NewDeliveredDate)
+  order by No_of_Orders desc
+  
+  --
+  drop table if exists #rfm2 
+; with rfm2 (Customer_id, MonetaryValue, AvgMonetaryValue, Frequency, LastOrderDate,MaxOrderDate, Recency) 
+ as
+  (select [dbo].[olist_customers_dataset$].customer_id,
+  sum([dbo].[olist_order_items_dataset$].price) as Monetary_Value, 
+  avg([dbo].[olist_order_items_dataset$].price) as AvgMonetaryValue,
+  count([dbo].[olist_orders_dataset$].order_id) AS Frequency,
+  max([dbo].[olist_orders_dataset$].order_purchase_timestamp) as last_order_date,
+  (select max(order_purchase_timestamp) from [dbo].[olist_orders_dataset$] where year(order_purchase_timestamp)= 2018) as max_order_date,
+  DATEDIFF(dd, max([dbo].[olist_orders_dataset$].order_purchase_timestamp), 
+  (select max(order_purchase_timestamp) from [dbo].[olist_orders_dataset$] where year(order_purchase_timestamp)= 2018 )) as Recency
+  from [dbo].[olist_customers_dataset$]
+  join [dbo].[olist_orders_dataset$] 
+  on [dbo].[olist_orders_dataset$].customer_id = [dbo].[olist_customers_dataset$].customer_id
+  join [dbo].[olist_order_items_dataset$]
+  on [dbo].[olist_order_items_dataset$].order_id = [dbo].[olist_orders_dataset$].order_id
+  where year([dbo].[olist_orders_dataset$].order_purchase_timestamp)= 2018
+  group by [dbo].[olist_customers_dataset$].customer_id),
+rfm_calc2 as (
+  select *,
+  ntile(4) over (order by Recency desc) as rfm_Recency2,
+  ntile(4) over (order by Frequency) as rfm_Frequency2,
+  ntile(4) over (order by MonetaryValue ) as rfm_Monetary2
+  from rfm2)
+select *, rfm_Recency2+ rfm_Frequency2+ rfm_Monetary2 as rfm_cell,
+cast(rfm_Recency2 as varchar)+ cast(rfm_Frequency2 as varchar) + cast(rfm_Monetary2 as varchar) rfm_cell_string
+into #rfm2018
+from rfm_calc2
+  
+  select * from #rfm2018
+  
+  -- Customer Segmentation
+   select Customer_id, rfm_Recency2,rfm_Frequency2,rfm_Monetary2, 
+  case when rfm_cell_string in (111, 112, 121, 122, 123, 132, 211, 212, 114, 141) then 'lost_customers'
+  when rfm_cell_string in (133, 134, 143, 244, 334, 343, 344, 144) then 'Almost_goneCustomers' -- customers that don't order much but buy large amount of products
+  when rfm_cell_string in (221) then 'IndecisiveCustomers' -- customers that can potentially leave the company to find another
+  when rfm_cell_string in (441) then 'CustomersWithlessMoney'-- customers that buy the cheap items alot
+  when rfm_cell_string in (311, 411, 331) then 'NewCustomers'
+  when rfm_cell_string in (222, 223, 233, 322) then 'PotentialCustomers' -- That havent made enough purchase to be lyal 
+  when rfm_cell_string in (323,333,321, 422, 332, 432) then 'Active Customers'
+  when rfm_cell_string in (433, 434,443, 444) then 'LoyalCustomers'
+  end rfm_segment2
+from #rfm2018

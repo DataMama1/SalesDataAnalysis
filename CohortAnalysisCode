@@ -1,0 +1,10 @@
+select * from [ForPractise].[dbo].[Online_Retail]
+
+-- TOTAL RECORDS = 541,909 rows
+
+select * from [ForPractise].[dbo].[Retail_data_Online]
+where CustomerID is null
+
+-- RECORDS WITH NO CUSTOMERID = 135,080
+-- RECORDS WITH CUSTOMERID = 406,829 
+

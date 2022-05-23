@@ -8,3 +8,31 @@ where CustomerID is null
 -- RECORDS WITH NO CUSTOMERID = 135,080
 -- RECORDS WITH CUSTOMERID = 406,829 
 
+
+--CREATING CTE TO PUT ALL CLEAN DATA IN ONE PLACE
+
+with newtable as
+(
+   select * from [ForPractise].[dbo].[Retail_data_Online]
+	  where CustomerID is not null
+),
+  online_retail as 
+  (
+    select * from newtable
+	  where Quantity >0 and UnitPrice > 0
+)
+	  select * from online_retail
+    
+    
+ -- REMOVING DUPLICATE DATA   
+    with newtable as
+	 ( select * from [ForPractise].[dbo].[Retail_data_Online]
+	  where CustomerID is not null), online_retail as 
+	  (select * from newtable
+	  where Quantity >0 and UnitPrice > 0) ,dup_chcek as (
+	  select * ,row_number() over (partition by InvoiceNo, StockCode, Quantity order by InvoiceDate) duplicates
+from online_retail
+)
+select * 
+into #online_retail_clean
+from dup_chcek where duplicates =1

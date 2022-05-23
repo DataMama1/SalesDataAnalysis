@@ -33,6 +33,54 @@ with newtable as
 	  select * ,row_number() over (partition by InvoiceNo, StockCode, Quantity order by InvoiceDate) duplicates
 from online_retail
 )
+
+-- CREATING COHORT INDEX
+select * from #Cohorts
+
+select mmx.*, Cohort_Index=  year_diff * 12 + month_diff + 1
+into #cohort_retention
+from 
+(
+
+select mm.*, year_diff= invoice_year - Cohort_Year,
+month_diff= InvoiceMonth- Cohort_Month
+from
+(select o.*, c.Cohort_Date, year(o.InvoiceDate) invoice_year, 
+MONTH(o.InvoiceDate) InvoiceMonth,year(c.Cohort_Date) Cohort_Year,
+month(c.Cohort_Date) Cohort_Month
+from #online_retail_new_clean o
+left join #Cohorts c
+on o.CustomerID = c.CustomerID) mm) mmx
+
+select * from #cohort_retention
 select * 
 into #online_retail_clean
 from dup_chcek where duplicates =1
+
+--CREATING A COHORT INDEX TABLE
+select *
+into #cohort_pivot
+from 
+(
+select distinct(CustomerID), Cohort_Date ,Cohort_Index
+from #cohort_retention
+) tbl
+pivot (count(CustomerID) for Cohort_Index in(
+	[1],
+	[2],
+	[3],
+	[4],
+	[5],
+	[6],
+	[7],
+	[8],
+	[9],
+	[10],
+	[11],
+	[12],
+	[13])) as  pivot_table
+
+	select * from 
+	#cohort_pivot order by 1
+
+	

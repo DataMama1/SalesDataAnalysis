@@ -95,14 +95,12 @@ from rfm_calc2
   
   -- PUTTING THE CUSTOMERS IN SEGMENTS
   
-   select Customer_id, rfm_Recency2,rfm_Frequency2,rfm_Monetary2, 
-  case when rfm_cell_string in (111, 112, 121, 122, 123, 132, 211, 212, 114, 141) then 'lost_customers'
-  when rfm_cell_string in (133, 134, 143, 244, 334, 343, 344, 144) then 'Almost_goneCustomers' -- customers that don't order much but buy large amount of products
-  when rfm_cell_string in (221) then 'IndecisiveCustomers' -- customers that can potentially leave the company to find another
-  when rfm_cell_string in (441) then 'CustomersWithlessMoney'-- customers that buy the cheap items alot
-  when rfm_cell_string in (311, 411, 331) then 'NewCustomers'
-  when rfm_cell_string in (222, 223, 233, 322) then 'PotentialCustomers' -- That havent made enough purchase to be lyal 
-  when rfm_cell_string in (323,333,321, 422, 332, 432) then 'Active Customers'
-  when rfm_cell_string in (433, 434,443, 444) then 'LoyalCustomers'
-  end rfm_segment2
+  select Customer_id, rfm_Recency,rfm_Frequency,rfm_Monetary, rfm_cell_string,
+  case when rfm_cell_string in (111, 112, 121, 141, 114,113) then 'LostCustomers'
+  when rfm_cell_string in (133, 134, 143, 144, 142) then 'AlmostLostCustomers' 
+  when rfm_cell_string in (311, 411, 321,324,221, 212,211,213) then 'NewCustomers'
+  when rfm_cell_string in (222, 223, 233, 322,323,332) then 'PotentialLoyalCustomers'
+  when rfm_cell_string in (343,333, 443,342, 442, 243, 433,444) then 'Loyal Customers'
+  when rfm_cell_string in (244,434, 224, 334, 344,324) then 'BigSpenders'
+  end rfm_segment, Price, Date
 from #rfm2018
